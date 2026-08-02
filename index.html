@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#c7dbe4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Bed Finder">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>Bed Finder</title>
+  <style>
+    :root {
+      --paper:#f4f2ec;
+      --line:#252525;
+      --gray:#d4d2cc;
+      --blue:#c7dbe4;
+      --white:#fbfaf6;
+      --muted:#626262;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      min-height:100vh;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--paper);
+      color:#151515;
+    }
+    main {
+      width:min(620px,100%);
+      margin:auto;
+      padding:calc(24px + env(safe-area-inset-top)) 18px calc(32px + env(safe-area-inset-bottom));
+    }
+    .app {
+      border:2px solid var(--line);
+      background:var(--white);
+      box-shadow:0 8px 0 rgba(0,0,0,.08);
+    }
+    header {
+      padding:22px 20px 18px;
+      background:var(--blue);
+      border-bottom:2px solid var(--line);
+    }
+    h1 { margin:0; font-size:29px; letter-spacing:-.5px; }
+    header p { margin:7px 0 0; font-size:14px; }
+    .content { padding:20px; }
+    label { display:block; font-weight:750; margin-bottom:8px; }
+    .search-row { display:flex; gap:10px; }
+    input {
+      width:100%;
+      min-width:0;
+      height:56px;
+      border:2px solid var(--line);
+      border-radius:0;
+      background:#fff;
+      font-size:25px;
+      font-weight:750;
+      text-align:center;
+      appearance:none;
+    }
+    button {
+      border:2px solid var(--line);
+      border-radius:0;
+      min-height:48px;
+      padding:0 18px;
+      background:var(--gray);
+      color:#111;
+      font-weight:800;
+      font-size:16px;
+    }
+    button:active { transform:translateY(1px); }
+    .result {
+      display:none;
+      margin-top:20px;
+      border:2px solid var(--line);
+      background:var(--gray);
+    }
+    .result.show { display:block; }
+    .result.suite { background:var(--blue); }
+    .room-title {
+      padding:14px 16px;
+      border-bottom:2px solid var(--line);
+      font-weight:850;
+      font-size:20px;
+    }
+    .result-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+    }
+    .cell { padding:18px 16px; min-height:112px; }
+    .cell + .cell { border-left:2px solid var(--line); }
+    .caption { font-size:13px; color:#333; margin-bottom:8px; }
+    .value { font-size:34px; font-weight:900; letter-spacing:.5px; }
+    .type { font-size:22px; }
+    .error {
+      display:none;
+      margin-top:20px;
+      border:2px solid var(--line);
+      padding:16px;
+      background:var(--gray);
+      font-weight:750;
+    }
+    .error.show { display:block; }
+    .recent { margin-top:22px; }
+    .recent h2 { font-size:16px; margin:0 0 10px; }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; }
+    .chip { min-height:40px; padding:0 14px; background:var(--white); }
+    .legend {
+      margin-top:22px;
+      padding-top:16px;
+      border-top:2px solid var(--line);
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.55;
+    }
+    footer { margin-top:14px; text-align:center; color:var(--muted); font-size:12px; }
+    @media (max-width:420px) {
+      .content { padding:16px; }
+      button#searchBtn { padding:0 14px; }
+      .value { font-size:30px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section class="app">
+    <header>
+      <h1>Bed Finder</h1>
+      <p>Pencarian tipe tempat tidur berdasarkan nomor kamar</p>
+    </header>
+    <div class="content">
+      <label for="roomInput">Nomor Kamar</label>
+      <div class="search-row">
+        <input id="roomInput" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+               autocomplete="off" placeholder="Contoh: 1122" autofocus>
+        <button id="searchBtn" type="button">Cari</button>
+      </div>
+
+      <section id="result" class="result" aria-live="polite">
+        <div id="roomTitle" class="room-title"></div>
+        <div class="result-grid">
+          <div class="cell">
+            <div class="caption">Tipe Tempat Tidur</div>
+            <div id="bedValue" class="value"></div>
+          </div>
+          <div class="cell">
+            <div class="caption">Tipe Kamar</div>
+            <div id="roomType" class="value type"></div>
+          </div>
+        </div>
+      </section>
+
+      <div id="error" class="error" aria-live="polite">
+        Nomor kamar tidak ditemukan.
+      </div>
+
+      <section class="recent">
+        <h2>Terakhir Dicari</h2>
+        <div id="recentList" class="chips"></div>
+      </section>
+
+      <div class="legend">
+        Data mengikuti tabel “침대 배치 현황” tanggal 31 Januari 2025.
+        Kamar di kolom paling kanan ditampilkan sebagai <strong>Suite</strong>.
+      </div>
+    </div>
+  </section>
+  <footer>Berfungsi tanpa internet setelah pertama kali dibuka.</footer>
+</main>
+
+<script>
+const rooms = {"1101":{"bed":"D","suite":false},"1102":{"bed":"D","suite":false},"1103":{"bed":"D","suite":false},"1104":{"bed":"D","suite":false},"1105":{"bed":"D","suite":false},"1106":{"bed":"D","suite":false},"1107":{"bed":"D","suite":false},"1108":{"bed":"D","suite":false},"1109":{"bed":"D","suite":false},"1110":{"bed":"D+D","suite":false},"1113":{"bed":"S+S","suite":false},"1114":{"bed":"S+S","suite":false},"1115":{"bed":"S+S","suite":false},"1116":{"bed":"S+S","suite":false},"1117":{"bed":"S+S","suite":false},"1118":{"bed":"S+S","suite":false},"1119":{"bed":"D","suite":false},"1120":{"bed":"D","suite":false},"1121":{"bed":"D","suite":false},"1122":{"bed":"S+S","suite":false},"1123":{"bed":"D","suite":false},"1124":{"bed":"D","suite":false},"1125":{"bed":"D","suite":false},"1126":{"bed":"D","suite":false},"1127":{"bed":"DSS","suite":true},"1001":{"bed":"D","suite":false},"1002":{"bed":"D","suite":false},"1003":{"bed":"D","suite":false},"1004":{"bed":"D","suite":false},"1005":{"bed":"D","suite":false},"1006":{"bed":"D","suite":false},"1007":{"bed":"D","suite":false},"1008":{"bed":"D","suite":false},"1009":{"bed":"D","suite":false},"1010":{"bed":"D","suite":false},"1011":{"bed":"D","suite":false},"1012":{"bed":"D","suite":false},"1013":{"bed":"S+S","suite":false},"1014":{"bed":"S+S","suite":false},"1015":{"bed":"S+S","suite":false},"1016":{"bed":"S+S","suite":false},"1017":{"bed":"S+S","suite":false},"1018":{"bed":"D","suite":false},"1019":{"bed":"D","suite":false},"1020":{"bed":"D","suite":false},"1021":{"bed":"D","suite":false},"1022":{"bed":"D","suite":false},"1023":{"bed":"D","suite":false},"1024":{"bed":"S+S","suite":false},"1025":{"bed":"S+S","suite":false},"1026":{"bed":"S+S","suite":false},"1027":{"bed":"DSS","suite":true},"901":{"bed":"D","suite":false},"902":{"bed":"D","suite":false},"903":{"bed":"D","suite":false},"904":{"bed":"D","suite":false},"905":{"bed":"D","suite":false},"906":{"bed":"D","suite":false},"907":{"bed":"D","suite":false},"908":{"bed":"D","suite":false},"909":{"bed":"D","suite":false},"910":{"bed":"D","suite":false},"911":{"bed":"D","suite":false},"912":{"bed":"D","suite":false},"913":{"bed":"S+S","suite":false},"914":{"bed":"S+S","suite":false},"915":{"bed":"S+S","suite":false},"916":{"bed":"S+S","suite":false},"917":{"bed":"S+S","suite":false},"918":{"bed":"S+S","suite":false},"919":{"bed":"D","suite":false},"920":{"bed":"D","suite":false},"921":{"bed":"D","suite":false},"922":{"bed":"D","suite":false},"923":{"bed":"D","suite":false},"924":{"bed":"D","suite":false},"925":{"bed":"D","suite":false},"926":{"bed":"D","suite":false},"927":{"bed":"DSS","suite":true},"801":{"bed":"D+S","suite":false},"802":{"bed":"D+S","suite":false},"803":{"bed":"D+S","suite":false},"804":{"bed":"D+S","suite":false},"805":{"bed":"D+S","suite":false},"806":{"bed":"D+S","suite":false},"807":{"bed":"D+S","suite":false},"808":{"bed":"D+S","suite":false},"809":{"bed":"D+S","suite":false},"810":{"bed":"D+S","suite":false},"811":{"bed":"D+S","suite":false},"812":{"bed":"D+S","suite":false},"813":{"bed":"D","suite":false},"814":{"bed":"D","suite":false},"815":{"bed":"D","suite":false},"816":{"bed":"D","suite":false},"817":{"bed":"D","suite":false},"818":{"bed":"D","suite":false},"819":{"bed":"D","suite":false},"820":{"bed":"D","suite":false},"821":{"bed":"S+S","suite":false},"822":{"bed":"S+S","suite":false},"823":{"bed":"S+S","suite":false},"824":{"bed":"S+S","suite":false},"825":{"bed":"S+S","suite":false},"826":{"bed":"S+S","suite":false},"827":{"bed":"DSS","suite":true},"701":{"bed":"D+D","suite":false},"702":{"bed":"D+D","suite":false},"703":{"bed":"D+D","suite":false},"704":{"bed":"D+D","suite":false},"705":{"bed":"D+D","suite":false},"706":{"bed":"D+D","suite":false},"707":{"bed":"D+D","suite":false},"708":{"bed":"D+D","suite":false},"709":{"bed":"D+D","suite":false},"710":{"bed":"D+D","suite":false},"711":{"bed":"D+D","suite":false},"712":{"bed":"D+D","suite":false},"713":{"bed":"D","suite":false},"714":{"bed":"D","suite":false},"715":{"bed":"D","suite":false},"716":{"bed":"D","suite":false},"717":{"bed":"D","suite":false},"718":{"bed":"D","suite":false},"719":{"bed":"D","suite":false},"720":{"bed":"D","suite":false},"721":{"bed":"S+S","suite":false},"722":{"bed":"S+S","suite":false},"723":{"bed":"S+S","suite":false},"724":{"bed":"S+S","suite":false},"725":{"bed":"S+S","suite":false},"726":{"bed":"S+S","suite":false},"727":{"bed":"DSS","suite":true},"601":{"bed":"D+S","suite":false},"602":{"bed":"D+S","suite":false},"603":{"bed":"D+S","suite":false},"604":{"bed":"D+S","suite":false},"605":{"bed":"D+S","suite":false},"606":{"bed":"D+S","suite":false},"607":{"bed":"D+S","suite":false},"608":{"bed":"D+S","suite":false},"609":{"bed":"D+S","suite":false},"610":{"bed":"D+S","suite":false},"611":{"bed":"D+S","suite":false},"612":{"bed":"D+S","suite":false},"613":{"bed":"D","suite":false},"614":{"bed":"D","suite":false},"615":{"bed":"D","suite":false},"616":{"bed":"D","suite":false},"617":{"bed":"D","suite":false},"618":{"bed":"D","suite":false},"619":{"bed":"D","suite":false},"620":{"bed":"D","suite":false},"621":{"bed":"S+S","suite":false},"622":{"bed":"S+S","suite":false},"623":{"bed":"S+S","suite":false},"624":{"bed":"S+S","suite":false},"625":{"bed":"S+S","suite":false},"626":{"bed":"S+S","suite":false},"627":{"bed":"DSS","suite":true},"501":{"bed":"D+S","suite":false},"502":{"bed":"D+S","suite":false},"503":{"bed":"D+S","suite":false},"504":{"bed":"D+S","suite":false},"505":{"bed":"D+S","suite":false},"506":{"bed":"D+S","suite":false},"507":{"bed":"D+S","suite":false},"508":{"bed":"D+S","suite":false},"509":{"bed":"D+S","suite":false},"510":{"bed":"D+S","suite":false},"511":{"bed":"D+S","suite":false},"512":{"bed":"D+S","suite":false},"513":{"bed":"D","suite":false},"514":{"bed":"D","suite":false},"515":{"bed":"D","suite":false},"516":{"bed":"D","suite":false},"517":{"bed":"D","suite":false},"518":{"bed":"D","suite":false},"519":{"bed":"D","suite":false},"520":{"bed":"D","suite":false},"521":{"bed":"S+S","suite":false},"522":{"bed":"S+S","suite":false},"523":{"bed":"S+S","suite":false},"524":{"bed":"S+S","suite":false},"525":{"bed":"S+S","suite":false},"526":{"bed":"S+S","suite":false},"527":{"bed":"DSS","suite":true},"401":{"bed":"SSS","suite":false},"402":{"bed":"SSS","suite":false},"403":{"bed":"SSS","suite":false},"404":{"bed":"SSS","suite":false},"405":{"bed":"SSS","suite":false},"406":{"bed":"SSS","suite":false},"407":{"bed":"SSS","suite":false},"408":{"bed":"SSS","suite":false},"409":{"bed":"SSS","suite":false},"410":{"bed":"SSS","suite":false},"411":{"bed":"SSS","suite":false},"412":{"bed":"SSS","suite":false},"413":{"bed":"D","suite":false},"414":{"bed":"D","suite":false},"415":{"bed":"D","suite":false},"416":{"bed":"D","suite":false},"417":{"bed":"D","suite":false},"418":{"bed":"D","suite":false},"419":{"bed":"D","suite":false},"420":{"bed":"S+S","suite":false},"421":{"bed":"S+S","suite":false},"422":{"bed":"S+S","suite":false},"423":{"bed":"S+S","suite":false},"424":{"bed":"S+S","suite":false},"425":{"bed":"D","suite":false},"426":{"bed":"D","suite":false},"427":{"bed":"DSS","suite":true},"301":{"bed":"SSS","suite":false},"302":{"bed":"SSS","suite":false},"303":{"bed":"SSS","suite":false},"304":{"bed":"SSS","suite":false},"305":{"bed":"SSS","suite":false},"306":{"bed":"SSS","suite":false},"307":{"bed":"SSS","suite":false},"308":{"bed":"SSS","suite":false},"309":{"bed":"SSS","suite":false},"310":{"bed":"SSS","suite":false},"311":{"bed":"SSS","suite":false},"312":{"bed":"SSS","suite":false},"313":{"bed":"S+S","suite":false},"314":{"bed":"S+S","suite":false},"315":{"bed":"D","suite":false},"316":{"bed":"D","suite":false},"317":{"bed":"D","suite":false},"318":{"bed":"D","suite":false},"319":{"bed":"S+S","suite":false},"320":{"bed":"S+S","suite":false},"321":{"bed":"S","suite":false},"322":{"bed":"S+S","suite":false},"323":{"bed":"S+S","suite":false},"324":{"bed":"S","suite":false},"325":{"bed":"S","suite":false},"326":{"bed":"S","suite":false},"327":{"bed":"DSS","suite":true}};
+const input = document.getElementById('roomInput');
+const result = document.getElementById('result');
+const errorBox = document.getElementById('error');
+const roomTitle = document.getElementById('roomTitle');
+const bedValue = document.getElementById('bedValue');
+const roomType = document.getElementById('roomType');
+const recentList = document.getElementById('recentList');
+
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem('recentRooms') || '[]'); }
+  catch { return []; }
+}
+
+function saveRecent(room) {
+  const next = [room, ...getRecent().filter(x => x !== room)].slice(0, 5);
+  localStorage.setItem('recentRooms', JSON.stringify(next));
+  renderRecent();
+}
+
+function renderRecent() {
+  const recent = getRecent();
+  recentList.innerHTML = '';
+  if (!recent.length) {
+    const empty = document.createElement('span');
+    empty.textContent = 'Belum ada pencarian';
+    empty.style.color = '#626262';
+    empty.style.fontSize = '14px';
+    recentList.appendChild(empty);
+    return;
+  }
+  recent.forEach(room => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.type = 'button';
+    b.textContent = room;
+    b.onclick = () => { input.value = room; searchRoom(); };
+    recentList.appendChild(b);
+  });
+}
+
+function searchRoom() {
+  const room = input.value.replace(/\D/g, '').trim();
+  input.value = room;
+  const info = rooms[room];
+
+  if (!info) {
+    result.className = 'result';
+    errorBox.classList.add('show');
+    return;
+  }
+
+  errorBox.classList.remove('show');
+  result.className = info.suite ? 'result show suite' : 'result show';
+  roomTitle.textContent = `Kamar ${room}`;
+  bedValue.textContent = info.bed;
+  roomType.textContent = info.suite ? 'Suite' : 'Standar';
+  saveRecent(room);
+}
+
+document.getElementById('searchBtn').addEventListener('click', searchRoom);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchRoom();
+});
+input.addEventListener('input', () => {
+  if (input.value.length >= 3 && rooms[input.value]) searchRoom();
+});
+renderRecent();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body>
+</html>
