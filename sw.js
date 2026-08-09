@@ -1,4 +1,4 @@
-const CACHE = "bed-finder-v1.1.0";
+const CACHE = "bed-finder-v1.1.1";
 
 const ASSETS = [
   "./",
@@ -33,43 +33,37 @@ self.addEventListener("activate", (event) => {
 
 // Stale-While-Revalidate
 self.addEventListener("fetch", (event) => {
-
   if (event.request.method !== "GET") return;
 
-  event.respondWith(
+  const cachePromise = caches.open(CACHE);
 
-    caches.match(event.request).then((cachedResponse) => {
-
-      const networkFetch = fetch(event.request)
-
-        .then((networkResponse) => {
-
-          if (
-            networkResponse &&
-            networkResponse.status === 200
-          ) {
-
-            caches.open(CACHE).then((cache) => {
-
-              cache.put(
-                event.request,
-                networkResponse.clone()
-              );
-
-            });
-
-          }
-
-          return networkResponse;
-
-        })
-
-        .catch(() => cachedResponse);
-
-      return cachedResponse || networkFetch;
-
-    })
-
+  const cachedResponsePromise = cachePromise.then((cache) =>
+    cache.match(event.request)
   );
 
+  const networkResponsePromise = fetch(event.request).then(
+    async (networkResponse) => {
+      if (networkResponse && networkResponse.ok) {
+        const cache = await cachePromise;
+        await cache.put(
+          event.request,
+          networkResponse.clone()
+        );
+      }
+
+      return networkResponse;
+    }
+  );
+
+  // 최신 파일을 캐시에 넣을 때까지
+  // 서비스 워커가 종료되지 않도록 유지
+  event.waitUntil(
+    networkResponsePromise.catch(() => {})
+  );
+
+  event.respondWith(
+    cachedResponsePromise.then((cachedResponse) => {
+      return cachedResponse || networkResponsePromise;
+    })
+  );
 });
